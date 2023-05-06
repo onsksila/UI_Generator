@@ -1,44 +1,45 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-
+import styled from "styled-components";
 function InputVarList() {
-  const { idtestevalcomp } = useParams(); // récupère l'id d'evaluation de comparaison depuis l'URL
+  const { idevalcomp } = useParams();
 
   const [inputVars, setInputVars] = useState([]);
+  // const [refreshData, setRefreshData] = useState(false); // nouvelle variable d'état pour rafraîchir les données
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:7072/${idtestevalcomp}`)
-      .then((response) => {
+    const fetchInputVars = async () => {
+      try {
+        const response = await axios.get(`http://localhost:7072/${idevalcomp}`);
         const inputVars = response.data.map((row) => ({
           varname: row.varname,
           varvalue: "",
-          vartype: row.vartype, // initialise la valeur de la variable à une chaîne vide
-          error: false, // initialise la propriété d'erreur à false
+          vartype: row.vartype,
+          path: row.path,
+          error: false,
         }));
         setInputVars(inputVars);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error(error);
-      });
-  }, [idtestevalcomp]);
+      }
+    };
+    fetchInputVars();
+  }, [idevalcomp]); // ajout de refreshData comme dépendance
+  // }, [idevalcomp, refreshData]); // ajout de refreshData comme dépendance
 
-  // fonction pour gérer la soumission des données
   const handleSubmit = (event) => {
-    event.preventDefault(); // empêche le formulaire de se soumettre normalement
-
-    // envoie une requête POST à l'API pour enregistrer les données
+    event.preventDefault();
     axios
-      .post(`http://localhost:7072/${idtestevalcomp}`, inputVars)
+      .post(`http://localhost:7072/${idevalcomp}`, inputVars)
       .then((response) => {
-        console.log(response.data); // affiche les données enregistrées dans la console
+        console.log(response.data);
+        // setRefreshData(!refreshData); // mise à jour de refreshData pour rafraîchir les données
       })
       .catch((error) => {
         console.error(error);
       });
   };
-
   // fonction pour mettre à jour la valeur de la variable lorsqu'elle est modifiée
   const handleInputChange = (event, index) => {
     const { name, value } = event.target;
@@ -82,39 +83,27 @@ function InputVarList() {
       })
     );
   };
-
   return (
-    <div>
-      <h2>
-        Liste des variables d'entrée pour l'évaluation de comparaison #
-        {idtestevalcomp}
-      </h2>
-      <form onSubmit={handleSubmit}>
+    <Container>
+      <Title>Données d'évaluation #{idevalcomp}</Title>
+      <Form onSubmit={handleSubmit}>
         {inputVars.map((inputVar, index) => {
-          if (inputVar.vartype === "boolean") {
-            return (
-              <div key={index}>
-                <label>{inputVar.varname}</label>
-                <span>({inputVar.vartype})</span>
-                <select
+          return (
+            <InputContainer key={index}>
+              <Label>
+                {inputVar.varname} ({inputVar.vartype}):
+              </Label>
+              {inputVar.vartype === "boolean" ? (
+                <Select
                   name={inputVar.varname}
                   value={inputVar.varvalue}
                   onChange={(event) => handleInputChange(event, index)}
                 >
                   <option value="true">true</option>
                   <option value="false">false</option>
-                </select>
-                {inputVar.error && (
-                  <p style={{ color: "red" }}>Type de données invalide</p>
-                )}
-              </div>
-            );
-          } else {
-            return (
-              <div key={index}>
-                <label>{inputVar.varname}</label>
-                <span>({inputVar.vartype})</span>
-                <input
+                </Select>
+              ) : (
+                <Input
                   type={
                     inputVar.vartype === "integer" ||
                     inputVar.vartype === "double"
@@ -125,18 +114,101 @@ function InputVarList() {
                   value={inputVar.varvalue}
                   onChange={(event) => handleInputChange(event, index)}
                 />
-                {inputVar.error && (
-                  <p style={{ color: "red" }}>Type de données invalide</p>
-                )}
-              </div>
-            );
-          }
+              )}
+              {inputVar.error && (
+                <ErrorMessage>Type de données invalide</ErrorMessage>
+              )}
+            </InputContainer>
+          );
         })}
-
-        <button type="submit">Enregistrer</button>
-      </form>
-    </div>
+        <Button type="submit">Enregistrer</Button>
+      </Form>
+    </Container>
   );
 }
 
 export default InputVarList;
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh; /* Ajouter la hauteur de la vue */
+  justify-content: center; /* Centrer les enfants horizontalement et verticalement */
+`;
+
+const Title = styled.h2`
+  text-align: center;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const Label = styled.label`
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: block;
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const Input = styled.input`
+  border: none;
+  background-color: #eee;
+  box-shadow: 0 0.4rem #dfd9d9;
+  border-radius: 45px;
+  padding: 10px;
+  margin-left: 10px;
+  &:hover {
+    background-color: #f4f9fa;
+  }
+  &:focus {
+    outline: none;
+    border: 2px solid #f08080;
+  }
+`;
+
+const Select = styled.select`
+  border: none;
+  background-color: #eee;
+  box-shadow: 0 0.4rem #dfd9d9;
+  border-radius: 45px;
+  padding: 10px;
+  margin-left: 10px;
+  &:hover {
+    background-color: #f4f9fa;
+  }
+  &:focus {
+    outline: none;
+    border: 2px solid #f08080;
+  }
+`;
+
+const ErrorMessage = styled.p`
+  color: #cb4a4a;
+  margin-top: 5px;
+  margin-left: 15px;
+`;
+
+const Button = styled.button`
+  background-color: #ffffff;
+  color: #000000;
+  box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 45px;
+  padding: 10px 20px;
+  margin-top: 20px;
+  transition: transform 0.3s ease-in-out;
+  &:hover {
+    background-color: #23c483;
+    color: #ffffff;
+    transform: translateY(-7px);
+  }
+`;

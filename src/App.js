@@ -6,7 +6,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/:idtestevalcomp" element={<InputVarList />} />
+        <Route path="/:idevalcomp" element={<InputVarList />} />
       </Routes>
     </Router>
   );
